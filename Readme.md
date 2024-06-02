@@ -1,5 +1,7 @@
 # Alien Invasion
 
+计科2101 Python Class Homework
+
 Alien Invasion is a simple arcade game built with Python and Pygame. In this game, the player controls a spaceship and must shoot down the invading aliens.
 
 ## Features
