@@ -32,6 +32,12 @@ SHOOT_SOUND = os.getenv("SHOOT_SOUND", None)
 HIT_SOUND = os.getenv("HIT_SOUND", None)
 COLLISION_SOUND = os.getenv("COLLISION_SOUND", None)
 
+# Button image paths
+START_BUTTON_IMG = os.getenv("START_BUTTON_IMG", None)
+PAUSE_BUTTON_IMG = os.getenv("PAUSE_BUTTON_IMG", None)
+CONTINUE_BUTTON_IMG = os.getenv("CONTINUE_BUTTON_IMG", None)
+RESTART_BUTTON_IMG = os.getenv("RESTART_BUTTON_IMG", None)
+
 # Initialize Pygame
 pygame.init()
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -60,6 +66,18 @@ alien_images = [load_image(img, (255, 0, 0)) for img in ALIEN_IMGS]
 shoot_sound = load_sound(SHOOT_SOUND)
 hit_sound = load_sound(HIT_SOUND)
 collision_sound = load_sound(COLLISION_SOUND)
+
+# Load button images with fallbacks
+def load_button_image(path, width, height):
+    if path and os.path.exists(path):
+        return pygame.transform.scale(pygame.image.load(path), (width, height))
+    else:
+        return None
+
+start_button_image = load_button_image(START_BUTTON_IMG, 100, 50)
+pause_button_image = load_button_image(PAUSE_BUTTON_IMG, 100, 50)
+continue_button_image = load_button_image(CONTINUE_BUTTON_IMG, 100, 50)
+restart_button_image = load_button_image(RESTART_BUTTON_IMG, 100, 50)
 
 # Game classes
 class Player(pygame.sprite.Sprite):
@@ -125,7 +143,7 @@ class Alien(pygame.sprite.Sprite):
             self.kill()
 
 class Button:
-    def __init__(self, text, x, y, width, height, callback):
+    def __init__(self, text, x, y, width, height, callback, image=None):
         self.text = text
         self.rect = pygame.Rect(x, y, width, height)
         self.color = BUTTON_COLOR
@@ -135,6 +153,7 @@ class Button:
         self.callback = callback
         self.hovered = False
         self.clicked = False
+        self.image = image
 
     def draw(self, screen):
         mouse_pos = pygame.mouse.get_pos()
@@ -142,20 +161,22 @@ class Button:
 
         if self.rect.collidepoint(mouse_pos):
             self.hovered = True
-            pygame.draw.rect(screen, self.hover_color, self.rect.inflate(10, 10))
             if mouse_click[0] == 1 and not self.clicked:
                 self.callback()
                 self.clicked = True
         else:
             self.hovered = False
-            pygame.draw.rect(screen, self.color, self.rect)
 
         if not mouse_click[0]:
             self.clicked = False
 
-        text_surface = self.font.render(self.text, True, self.text_color)
-        text_rect = text_surface.get_rect(center=self.rect.center)
-        screen.blit(text_surface, text_rect)
+        if self.image:
+            screen.blit(self.image, self.rect.topleft)
+        else:
+            pygame.draw.rect(screen, self.hover_color if self.hovered else self.color, self.rect)
+            text_surface = self.font.render(self.text, True, self.text_color)
+            text_rect = text_surface.get_rect(center=self.rect.center)
+            screen.blit(text_surface, text_rect)
 
 class Game:
     def __init__(self):
@@ -169,14 +190,15 @@ class Game:
         self.game_over_flag = False
         self.game_started = False
 
-        self.start_button = Button('Start', 10, 10, 100, 50, self.start_game)
-        self.pause_button = Button('Pause', 120, 10, 100, 50, self.pause_game)
-        self.continue_button = Button('Continue', 120, 10, 100, 50, self.pause_game)
-        self.restart_button = Button('Restart', 230, 10, 100, 50, self.restart_game)
+        self.start_button = Button('Start', 10, 10, 100, 50, self.start_game, start_button_image)
+        self.pause_button = Button('Pause', 120, 10, 100, 50, self.pause_game, pause_button_image)
+        self.continue_button = Button('Continue', 120, 10, 100, 50, self.pause_game, continue_button_image)
+        self.restart_button = Button('Restart', 230, 10, 100, 50, self.restart_game, restart_button_image)
 
     def start_game(self):
         self.paused = False
         self.game_started = True
+        self.start_button = None  # Remove start button after game starts
 
     def pause_game(self):
         self.paused = not self.paused
@@ -223,7 +245,8 @@ class Game:
         self.player.bullets.draw(screen)
         self.draw_text(f'Score: {self.score}', 25, SCREEN_WIDTH // 2, 10)
 
-        self.start_button.draw(screen)
+        if self.start_button:
+            self.start_button.draw(screen)
         if self.game_started:
             if self.paused:
                 self.continue_button.draw(screen)
